@@ -2,7 +2,7 @@ SAMPLES, _ = glob_wildcards("fastqs/{samples}_L001{suffix}.fastq.gz")
 SAMPLES = list(set(SAMPLES))
 
 #SAMPLES, SNUMS = zip(*[_.split("_") for _ in set(RAW_SAMPLES)])
-SPADES = "./2022-08-05_illumina-seq/SPAdes-3.15.4-Darwin/bin/spades.py"
+SPADES = "./SPAdes-3.15.4-Darwin/bin/spades.py"
 BANDAGE = "./Bandage_macOS-x86-64_v0.9.0/Bandage.app/Contents/MacOS/Bandage"
 
 rule all:
@@ -108,7 +108,8 @@ rule annotate:
         html="output/annotated_plasmids/{sample}_pLann.html",
         gbk="output/annotated_plasmids/{sample}_pLann.gbk",
     params:
-        "-h"
+        location=directory("output/annotated_plasmids"),
+        flags="-h"
     log:
         "output/logs/pLannotate/{sample}.log"
     conda:
@@ -117,8 +118,8 @@ rule annotate:
         """
         plannotate batch \
             -i {input.fasta} \
-            -o annotated_plasmids \
+            -o {params.location} \
             -f {wildcards.sample} \
-            {params} \
+            {params.flags} \
             &> {log}
         """

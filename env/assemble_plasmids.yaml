@@ -8,4 +8,3 @@ dependencies:
   - plannotate
   - fastp
   - unicycler
-  - seqtk
