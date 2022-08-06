@@ -1,0 +1,1 @@
+snakemake --cores 7 --use-conda

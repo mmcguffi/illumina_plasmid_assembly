@@ -1,0 +1,11 @@
+name: assemble_plasmids
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - biopython
+  - plannotate
+  - fastp
+  - unicycler
+  - seqtk
