@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-snakemake --cores 7 --use-conda -k &>> snakemake.log
+snakemake --cores 7 --use-conda -k >> snakemake.log 2>&1
