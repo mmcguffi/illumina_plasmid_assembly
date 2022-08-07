@@ -22,8 +22,8 @@ rule trim:
         fq1="fastqs/{sample}_L001_R1_001.fastq.gz",
         fq2="fastqs/{sample}_L001_R2_001.fastq.gz"
     output:
-        fqt1="output/fastq_trim/{sample}.trim.R1.fastq.gz",
-        fqt2="output/fastq_trim/{sample}.trim.R2.fastq.gz",
+        fqt1=temp("output/fastq_trim/{sample}.trim.R1.fastq.gz"),
+        fqt2=temp("output/fastq_trim/{sample}.trim.R2.fastq.gz"),
     threads:
         1
     params:
@@ -101,6 +101,25 @@ rule assembly_graph:
         {BANDAGE} info {input.gfa} > {output.info}
         """
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+
+def is_linear(wildcards):
+    path = f"output/assemblies/{wildcards.sample}/assembly.fasta"
+    fasta = list(SeqIO.parse(path, "fasta"))
+    assert len(fasta) == 1
+    contig = fasta[0]
+    contig_desc = contig.description.split(" ")
+    try:
+        linear = contig_desc[3].split("=")[1] != 'true'
+    except IndexError:
+        linear = True
+
+    linear_flag = "--linear" if linear else ""
+
+    return linear_flag
+
+
 rule annotate:
     input:
         fasta="output/assemblies/{sample}/assembly.fasta",
@@ -108,8 +127,9 @@ rule annotate:
         html="output/annotated_plasmids/{sample}_pLann.html",
         gbk="output/annotated_plasmids/{sample}_pLann.gbk",
     params:
+        flags="-h",
+        linear=is_linear,
         location=directory("output/annotated_plasmids"),
-        flags="-h"
     log:
         "output/logs/pLannotate/{sample}.log"
     conda:
@@ -121,5 +141,6 @@ rule annotate:
             -o {params.location} \
             -f {wildcards.sample} \
             {params.flags} \
+            {params.linear} \
             &> {log}
         """
