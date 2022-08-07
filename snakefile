@@ -27,7 +27,7 @@ rule trim:
     threads:
         1
     params:
-        "-g --detect_adapter_for_pe --average_qual 30 --correction --cut_tail --cut_window_size 1 --cut_mean_quality 30"
+        "-g --detect_adapter_for_pe --correction --cut_tail --cut_window_size 1 --cut_mean_quality 25"
     log:
         log="output/logs/fastp/{sample}.log",
         json="output/logs/fastp/{sample}.json",
