@@ -1,3 +1,6 @@
+import pandas as pd
+sample_ref = pd.read_csv("reference.csv")
+
 SAMPLES, _ = glob_wildcards("fastqs/{samples}_L001{suffix}.fastq.gz")
 SAMPLES = list(set(SAMPLES))
 
@@ -11,10 +14,11 @@ rule all:
         #expand("output/assemblies/{sample}/assembly.fasta", sample = SAMPLES),
         expand("output/assembly_graphs/png/{sample}.gfa.png", 
             sample = SAMPLES),
-        expand("output/annotated_plasmids/{sample}_pLann.{extn}", 
-            sample = SAMPLES, 
-            extn = ['gbk','html'])
-
+        # expand("output/annotated_plasmids/{sample}_pLann.{extn}", 
+        #     sample = SAMPLES, 
+        #     extn = ['gbk','html']),
+        expand("output/contrasted_plasmids/{sample}_pLann_contrast.html", 
+            sample = SAMPLES),
 
 
 rule trim:
@@ -51,8 +55,8 @@ rule sub_sample:
         fqt1="output/fastq_trim/{sample}.trim.R1.fastq.gz",
         fqt2="output/fastq_trim/{sample}.trim.R2.fastq.gz"
     output:
-        fqts1="output/fastq_trim_subsample/{sample}.sub.R1.fastq.gz",
-        fqts2="output/fastq_trim_subsample/{sample}.sub.R2.fastq.gz"
+        fqts1=temp("output/fastq_trim_subsample/{sample}.sub.R1.fastq.gz"),
+        fqts2=temp("output/fastq_trim_subsample/{sample}.sub.R2.fastq.gz")
     params:
         subset=2500 #subsets to 2500 reads per paired end, which should be ~80x coverage for a 8kb plasmid
     conda:
@@ -144,3 +148,15 @@ rule annotate:
             {params.linear} \
             &> {log}
         """
+
+rule contrast_plasmid:
+    input:
+        reference= lambda wildcards: "references/" + sample_ref["reference"][sample_ref["sample"]==wildcards.sample],
+        #reference="references/{sample}.gbk",
+        assembly="output/annotated_plasmids/{sample}_pLann.gbk",
+    output:
+        html="output/contrasted_plasmids/{sample}_pLann_contrast.html"
+    conda:
+        "env/assemble_plasmids.yaml"
+    script:
+        "scripts/plas_contrast.py"

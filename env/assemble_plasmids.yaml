@@ -8,3 +8,4 @@ dependencies:
   - plannotate
   - fastp
   - unicycler
+  - bokeh
