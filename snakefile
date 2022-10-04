@@ -1,10 +1,12 @@
 import pandas as pd
 sample_ref = pd.read_csv("reference.csv")
+sample_ref["sample"] = sample_ref["sample"].replace(".","-")
+REFS = glob_wildcards("references/{refs}")
+sample_ref = sample_ref[sample_ref["reference"].isin(REFS.refs)]
 
-SAMPLES, _ = glob_wildcards("fastqs/{samples}_L001{suffix}.fastq.gz")
-SAMPLES = list(set(SAMPLES))
-
-#SAMPLES, SNUMS = zip(*[_.split("_") for _ in set(RAW_SAMPLES)])
+SAMPLES, SNUM, _ = glob_wildcards("fastqs/{samples}_S{snum}_L001{suffix}.fastq.gz")
+SAMPLES = dict(zip(SAMPLES, SNUM))
+#SAMPLES = {k:v for i,(k,v) in enumerate(SAMPLES.items()) if i < 2}
 SPADES = "./SPAdes-3.15.4-Darwin/bin/spades.py"
 BANDAGE = "./Bandage_macOS-x86-64_v0.9.0/Bandage.app/Contents/MacOS/Bandage"
 
@@ -13,18 +15,28 @@ rule all:
         #expand("output/fastq_trim/{sample}.trim.{read}.fastq.gz", sample = SAMPLES, read = ['R1','R2']),
         #expand("output/assemblies/{sample}/assembly.fasta", sample = SAMPLES),
         expand("output/assembly_graphs/png/{sample}.gfa.png", 
-            sample = SAMPLES),
-        # expand("output/annotated_plasmids/{sample}_pLann.{extn}", 
-        #     sample = SAMPLES, 
-        #     extn = ['gbk','html']),
+            sample = SAMPLES.keys()),
+        expand("output/annotated_plasmids/{sample}_pLann.{extn}", 
+            sample = SAMPLES.keys(), 
+            extn = ['gbk','html']),
         expand("output/contrasted_plasmids/{sample}_pLann_contrast.html", 
-            sample = SAMPLES),
+            sample = [_ for _ in SAMPLES.keys() if _ in sample_ref['sample'].values]),
+            
+
+def trim_name1(wildcards):
+    return f"fastqs/{wildcards.sample}_S{SAMPLES[wildcards.sample]}_L001_R1_001.fastq.gz"
+def trim_name2(wildcards):
+    return f"fastqs/{wildcards.sample}_S{SAMPLES[wildcards.sample]}_L001_R2_001.fastq.gz"
 
 
 rule trim:
     input:
-        fq1="fastqs/{sample}_L001_R1_001.fastq.gz",
-        fq2="fastqs/{sample}_L001_R2_001.fastq.gz"
+        # fq1="fastqs/{sample}_S*_L001_R1_001.fastq.gz",
+        # fq2="fastqs/{sample}_S*_L001_R2_001.fastq.gz"
+        # fq1= lambda wildcards: expand("fastqs/{{sample}}_S{{snum}}_L001_R1_001.fastq.gz", sample=wildcards.sample, snum = SAMPLES[wildcards.sample]),
+        # fq2= lambda wildcards: expand("fastqs/{{sample}}_S{{snum}}_L001_R2_001.fastq.gz", sample=wildcards.sample, snum = SAMPLES[wildcards.sample])
+        fq1= trim_name1,
+        fq2= trim_name2
     output:
         fqt1=temp("output/fastq_trim/{sample}.trim.R1.fastq.gz"),
         fqt2=temp("output/fastq_trim/{sample}.trim.R2.fastq.gz"),
@@ -111,7 +123,8 @@ from Bio.Seq import Seq
 def is_linear(wildcards):
     path = f"output/assemblies/{wildcards.sample}/assembly.fasta"
     fasta = list(SeqIO.parse(path, "fasta"))
-    assert len(fasta) == 1
+    if len(fasta) != 1:
+        return ""
     contig = fasta[0]
     contig_desc = contig.description.split(" ")
     try:
